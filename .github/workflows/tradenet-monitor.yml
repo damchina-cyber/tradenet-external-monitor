@@ -1,0 +1,33 @@
+name: TradeNet External Monitor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" 
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test TradeNet
+        shell: pwsh
+        run: |
+          $Url = "https://tradenet.ccnhub.com"
+          $ThresholdMs = 300
+
+          $start = Get-Date
+          $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+          $end = Get-Date
+
+          $totalMs = ($end - $start).TotalMilliseconds
+          $pop = $resp.Headers["X-Volterra-Location"]
+          $envoy = $resp.Headers["X-Envoy-Upstream-Service-Time"]
+
+          Write-Host "TOTAL_MS=$totalMs"
+          Write-Host "POP=$pop"
+          Write-Host "ENVOY_MS=$envoy"
+
+          if ($totalMs -gt $ThresholdMs) {
+            Write-Host "::warning::TradeNet slow - $totalMs ms POP=$pop"
+          }
