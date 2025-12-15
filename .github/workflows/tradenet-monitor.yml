@@ -13,7 +13,7 @@ jobs:
       - name: Test TradeNet
         shell: pwsh
         run: |
-          $Url = "https://tradenet.ccnhub.com"
+          $Url = "https://tradenet.ccnhub.com/WebApp/TradeNet.UI.Web/ErrorPage.aspx"
           $ThresholdMs = 300
 
           $start = Get-Date
