@@ -69,7 +69,7 @@ jobs:
                       POP: $pop
                       Total: ${totalMs}ms
                       Envoy: $envoy"
-                themeColor = ""FF0000""
+                themeColor = "FF0000"
               } | ConvertTo-Json
 
               Invoke-RestMethod -Method Post -Uri $env:WEBHOOK -Body $body -ContentType "application/json"
