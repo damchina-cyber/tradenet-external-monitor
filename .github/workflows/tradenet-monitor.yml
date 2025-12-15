@@ -1,8 +1,8 @@
-name: TradeNet External Monitor
+name: TradeNet External Monitor (SEA-aware)
 
 on:
   schedule:
-    - cron: "*/10 * * * *" 
+    - cron: "*/10 * * * *"   # mỗi 10 phút
   workflow_dispatch:
 
 jobs:
@@ -10,17 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Test TradeNet
+      - name: Test TradeNet + Geo detect + Alert
         shell: pwsh
+        env:
+          WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}   # Teams/Slack webhook
         run: |
           $Url = "https://tradenet.ccnhub.com/WebApp/TradeNet.UI.Web/ErrorPage.aspx"
           $ThresholdMs = 300
 
+          # ---- Detect runner geo ----
+          try {
+            $geo = Invoke-RestMethod "https://ipinfo.io/json" -TimeoutSec 10
+            $clientCountry = $geo.country
+            $clientCity = $geo.city
+            $clientOrg = $geo.org
+          } catch {
+            $clientCountry = "UNK"
+            $clientCity = "UNK"
+            $clientOrg = "UNK"
+          }
+
+          Write-Host "CLIENT=$clientCity-$clientCountry $clientOrg"
+
+          # ---- Call TradeNet ----
           $start = Get-Date
-          $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+          try {
+            $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+          } catch {
+            Write-Host "::error::Request failed"
+            throw
+          }
           $end = Get-Date
 
-          $totalMs = ($end - $start).TotalMilliseconds
+          $totalMs = [int](($end - $start).TotalMilliseconds)
           $pop = $resp.Headers["X-Volterra-Location"]
           $envoy = $resp.Headers["X-Envoy-Upstream-Service-Time"]
 
@@ -28,6 +50,22 @@ jobs:
           Write-Host "POP=$pop"
           Write-Host "ENVOY_MS=$envoy"
 
-          if ($totalMs -gt $ThresholdMs) {
-            Write-Host "::warning::TradeNet slow - $totalMs ms POP=$pop"
+          # ---- SEA logic ----
+          $seaCountries = @("SG","VN","MY","TH","ID","PH","HK","JP")
+          $isSEA = $seaCountries -contains $clientCountry
+
+          # ---- Decide alert ----
+          if ($isSEA -and $totalMs -gt $ThresholdMs) {
+            Write-Host "::warning::SEA client slow - $totalMs ms POP=$pop"
+
+            if ($env:WEBHOOK) {
+              $time = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
+              $body = @{
+                text = "🚨 TradeNet latency alert (External)\nTime: $time UTC\nClient: $clientCity-$clientCountry ($clientOrg)\nPOP: $pop\nTotal: ${totalMs}ms\nEnvoy: $envoy"
+              } | ConvertTo-Json
+
+              Invoke-RestMethod -Method Post -Uri $env:WEBHOOK -Body $body -ContentType "application/json"
+            }
+          } else {
+            Write-Host "No alert condition met (isSEA=$isSEA, totalMs=$totalMs)"
           }
