@@ -16,7 +16,7 @@ jobs:
           WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}   # Teams/Slack webhook
         run: |
           $Url = "https://tradenet.ccnhub.com/WebApp/TradeNet.UI.Web/ErrorPage.aspx"
-          $ThresholdMs = 200
+          $ThresholdMs = 10000
 
           # ---- Detect runner geo ----
           try {
@@ -63,8 +63,7 @@ jobs:
               $time = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
               $body = @{
                  title = "TradeNet High Alert"
-                text = "🚨 TradeNet latency alert (External)
-                      Time: $time UTC
+                text = "🚨 Latency alert from external.
                       Client: $clientCity-$clientCountry ($clientOrg)
                       POP: $pop
                       Total: ${totalMs}ms
