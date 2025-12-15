@@ -62,7 +62,14 @@ jobs:
             if ($env:WEBHOOK) {
               $time = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
               $body = @{
-                text = "🚨 TradeNet latency alert (External)\nTime: $time UTC\nClient: $clientCity-$clientCountry ($clientOrg)\nPOP: $pop\nTotal: ${totalMs}ms\nEnvoy: $envoy"
+                 title = "TradeNet High Alert"
+                text = "🚨 TradeNet latency alert (External)
+                      Time: $time UTC
+                      Client: $clientCity-$clientCountry ($clientOrg)
+                      POP: $pop
+                      Total: ${totalMs}ms
+                      Envoy: $envoy"
+                themeColor = ""FF0000""
               } | ConvertTo-Json
 
               Invoke-RestMethod -Method Post -Uri $env:WEBHOOK -Body $body -ContentType "application/json"
