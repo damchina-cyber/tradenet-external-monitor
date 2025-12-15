@@ -16,7 +16,7 @@ jobs:
           WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}   # Teams/Slack webhook
         run: |
           $Url = "https://tradenet.ccnhub.com/WebApp/TradeNet.UI.Web/ErrorPage.aspx"
-          $ThresholdMs = 300
+          $ThresholdMs = 200
 
           # ---- Detect runner geo ----
           try {
@@ -55,7 +55,8 @@ jobs:
           $isSEA = $seaCountries -contains $clientCountry
 
           # ---- Decide alert ----
-          if ($isSEA -and $totalMs -gt $ThresholdMs) {
+          #if ($isSEA -and $totalMs -gt $ThresholdMs) {
+          if ($totalMs -gt $ThresholdMs) {
             Write-Host "::warning::SEA client slow - $totalMs ms POP=$pop"
 
             if ($env:WEBHOOK) {
